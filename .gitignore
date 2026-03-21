@@ -141,6 +141,7 @@ training_data
 testing_data
 all_data
 
+
 # fonts
 fonts/google/*
 fonts/vi/*
@@ -158,3 +159,6 @@ speech_data
 *.model
 *.tflite
 logs
+/model/trained.model.keras
+/model/checkpoint.model.keras
+/model/fully_trained.model.keras
