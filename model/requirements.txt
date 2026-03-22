@@ -4,7 +4,8 @@ pandas
 numpy
 jupyter
 scipy
-tensorflow-io
+# Optional and not available on many Windows/Python combinations:
+# tensorflow-io
 tqdm
 pyaudio
 jupyter_contrib_nbextensions
