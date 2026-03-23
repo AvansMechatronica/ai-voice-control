@@ -162,3 +162,8 @@ logs
 /model/trained.model.keras
 /model/checkpoint.model.keras
 /model/fully_trained.model.keras
+
+model/_background_noise_
+model/_problem_noise_
+*.zip
+*.tar.gz
