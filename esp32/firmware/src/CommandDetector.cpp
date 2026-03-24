@@ -25,6 +25,10 @@ CommandDetector::CommandDetector(I2SSampler *sample_provider, CommandProcessor *
     // Create our neural network
     m_nn = new NeuralNetwork();
     Serial.printf("Created Neural Net\n");
+    if (!m_nn->isReady())
+    {
+        Serial.printf("Neural network is not ready\n");
+    }
     // create our audio processor
     m_audio_processor = new AudioProcessor(AUDIO_LENGTH, WINDOW_SIZE, STEP_SIZE, POOLING_SIZE);
     // clear down the window
@@ -52,6 +56,11 @@ CommandDetector::~CommandDetector()
 
 void CommandDetector::run()
 {
+    if (!m_nn->isReady())
+    {
+        return;
+    }
+
     // time how long this takes for stats
     long start = millis();
     // get access to the samples that have been read in
@@ -60,16 +69,26 @@ void CommandDetector::run()
     reader->rewind(16000);
     // get hold of the input buffer for the neural network so we can feed it data
     float *input_buffer = m_nn->getInputBuffer();
+    if (!input_buffer)
+    {
+        delete reader;
+        return;
+    }
     // process the samples to get the spectrogram
     bool is_valid = m_audio_processor->get_spectrogram(reader, input_buffer);
     // finished with the sample reader
     delete reader;
     // get the prediction for the spectrogram
     m_nn->predict();
+    float *output_buffer = m_nn->getOutputBuffer();
+    if (!output_buffer)
+    {
+        return;
+    }
     // keep track of the previous 5 scores - about 0.5 seconds given current processing speed
     for (int i = 0; i < NUMBER_COMMANDS; i++)
     {
-        float prediction = std::max(m_nn->getOutputBuffer()[i], 1e-6f);
+        float prediction = std::max(output_buffer[i], 1e-6f);
         m_scores[m_scores_index][i] = log(is_valid ? prediction : 1e-6);
     }
     m_scores_index = (m_scores_index + 1) % COMMAND_WINDOW;
