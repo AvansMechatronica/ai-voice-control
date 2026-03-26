@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <driver/i2s.h>
+#include <esp_idf_version.h>
 #include <esp_task_wdt.h>
 #include "I2SMicSampler.h"
-//#include "config.h"
 #include "CommandDetector.h"
 #include "CommandProcessor.h"
 #include "config.h"
@@ -34,12 +34,16 @@ void setup()
   Serial.println("Starting up");
 
   // make sure we don't get killed for our long running tasks
+#if ESP_IDF_VERSION_MAJOR >= 5
   esp_task_wdt_config_t wdt_config = {
     .timeout_ms = 10000,
     .idle_core_mask = 0,
     .trigger_panic = false,
   };
   esp_task_wdt_init(&wdt_config);
+#else
+  esp_task_wdt_init(10, false);
+#endif
 
   // start up the I2S input (from either an I2S microphone or Analogue microphone via the ADC)
   // Direct i2s input from INMP441 or the SPH0645
