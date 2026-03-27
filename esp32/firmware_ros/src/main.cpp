@@ -10,6 +10,15 @@
 
 MicroROS micro_ros;
 
+static void publishDetectedWordCallback(uint8_t wordId, void *context)
+{
+  MicroROS *microRos = static_cast<MicroROS *>(context);
+  if (microRos)
+  {
+    microRos->publish_detected_word(wordId);
+  }
+}
+
 // This task does all the heavy lifting for our application
 void applicationTask(void *param)
 {
@@ -44,6 +53,7 @@ void setup()
   I2SSampler *i2s_sampler = new I2SMicSampler(pin_config, false);
   // the command processor
   CommandProcessor *command_processor = new CommandProcessor();
+  command_processor->setDetectedWordCallback(publishDetectedWordCallback, &micro_ros);
 
   // create our application
   CommandDetector *commandDetector = new CommandDetector(i2s_sampler, command_processor);

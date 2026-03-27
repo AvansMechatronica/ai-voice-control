@@ -19,6 +19,7 @@ public:
     MicroROS();
     void init();
     void loop();
+    void publish_detected_word(uint8_t word_id);
 private:
     rcl_publisher_t detected_word_publisher;
     std_msgs__msg__UInt8 detected_word;

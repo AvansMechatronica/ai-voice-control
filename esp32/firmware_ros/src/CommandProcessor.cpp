@@ -38,6 +38,10 @@ const int rightStop = 1500;
 void CommandProcessor::processCommand(uint16_t commandIndex)
 {
     //digitalWrite(GPIO_NUM_2, HIGH);
+    if (m_detected_word_callback)
+    {
+        m_detected_word_callback(static_cast<uint8_t>(commandIndex), m_detected_word_callback_context);
+    }
     switch (commandIndex)
     {
     case 0: // forward
@@ -75,6 +79,9 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
 
 CommandProcessor::CommandProcessor()
 {
+    m_detected_word_callback = nullptr;
+    m_detected_word_callback_context = nullptr;
+
     //pinMode(GPIO_NUM_2, OUTPUT);
     // setup the motors
     //ledcSetup(0, 50, 16);
@@ -93,6 +100,12 @@ CommandProcessor::CommandProcessor()
     // kick off the command processor task
     TaskHandle_t command_queue_task_handle;
     xTaskCreate(commandQueueProcessorTask, "Command Queue Processor", 1024, this, 1, &command_queue_task_handle);
+}
+
+void CommandProcessor::setDetectedWordCallback(DetectedWordCallback callback, void *context)
+{
+    m_detected_word_callback = callback;
+    m_detected_word_callback_context = context;
 }
 
 void CommandProcessor::queueCommand(uint16_t commandIndex, float best_score)
