@@ -1,4 +1,10 @@
 #include "micro_ros.h"
+#if defined(WIFI)
+#include "wifi_network_config.h"
+#include <esp_wifi.h>
+#define NODE_NAME "voice_control_node"
+#endif
+
 
 static void micro_ros_task(void *param)
 {
@@ -40,6 +46,36 @@ MicroROS::MicroROS() {
 
 }
 
+/**
+ * Convert snake_case to camelCase
+ */
+char* convertToCamelCase(const char *input) {
+  static char output[64];
+  if (input == nullptr) {
+    output[0] = '\0';
+    return output;
+  }
+
+  size_t out_index = 0;
+  bool upper_next = false;
+  for (size_t in_index = 0; input[in_index] != '\0' && out_index < (sizeof(output) - 1); ++in_index) {
+    char current = input[in_index];
+    if (current == '_') {
+      upper_next = true;
+      continue;
+    }
+
+    if (upper_next && current >= 'a' && current <= 'z') {
+      current = static_cast<char>(current - ('a' - 'A'));
+    }
+    upper_next = false;
+    output[out_index++] = current;
+  }
+
+  output[out_index] = '\0';
+  return output;
+}
+
 void MicroROS::init() {
     // Initialization code for micro-ROS (if needed)
 #if defined(ONBOARD_LED_PIN)
@@ -49,10 +85,39 @@ void MicroROS::init() {
 
 
 #if defined(WIFI)
-//#define WIFI_SSID "Wifi_ssid"
-//#define WIFI_PASSWORD "Wifi_Password"
-  WiFi.setHostname("VoiceControl");
-  set_microros_wifi_transports((char*)wifiSSID, (char*)wifiPass, AGENT_IP_ADDRESS, (size_t)PORT);
+  const char *host_name = convertToCamelCase(NODE_NAME);
+  Serial.printf("hostname :%s\n", host_name);
+  WiFi.setHostname(host_name);
+#if 0
+  
+  // UCP_MOTORS_PIN low to force WiFi configuration mode
+  bool force_configure_wifi = false;//digitalRead(UCP_MOTORS_PIN) == LOW;
+  
+
+  NETWORK_CONFIG networkConfig;
+  bool wifiUp = configureNetwork(force_configure_wifi, &networkConfig);
+  if(!wifiUp){
+    Serial.printf("Config mode:\nconnect to AP\nand set WiFi\n");
+    return;
+  }
+
+  esp_wifi_set_max_tx_power(WIFI_POWER_19_5dBm); // Set max WiFi transmit power to 19.5 dBm (max for ESP32-S3)
+
+  set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
+                               const_cast<char*>(networkConfig.password.c_str()), 
+                               networkConfig.microros_agent_ip_address,
+                               networkConfig.microros_agent_port);
+#else
+#define WIFI_SSID "VRV9517724283"
+#define WIFI_PASSWORD "@AYCwXhz976C"
+#define AGENT_IP_ADDRESS IPAddress(192, 168, 2, 150)
+#define PORT 8888
+
+  set_microros_wifi_transports((char*)WIFI_SSID, (char*)WIFI_PASSWORD, AGENT_IP_ADDRESS, (size_t)PORT);
+#endif
+  Serial.printf("WiFi Connected\n");
+  delay(2000);
+
 #else
   set_microros_serial_transports(Serial);
   delay(2000);

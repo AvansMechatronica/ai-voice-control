@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pioneer 3DX WiFi Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="topnav">
+    <h1>Pioneer 3DX WiFi Manager</h1>
+  </div>
+  <div class="content">
+    <div class="card-grid">
+      <div class="card">
+        <form action="/" method="POST">
+          <p>
+            <label for="ssid">WIFI_SSID</label>
+            <select id="ssid" name="ssid">
+              <option value="">Scanning networks...</option>
+            </select><br>
+            <label for="pass">Password</label>
+            <input type="text" id ="pass" name="pass"><br>
+            <label for="ros_agent_ipPath">microROS Agent IP Addr</label>
+            <input type="text" id ="ros_agent_ipPath" name="ros_agent_ipPath" value="192.168.2.150"><br>
+            <label for="ros_agent_port">microROS Agent Port</label>
+            <input type="text" id ="ros_agent_port" name="ros_agent_port" value="8888"><br>
+            <input type ="submit" value ="Submit">
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function loadSsidOptions(attempt = 0) {
+      const select = document.getElementById('ssid');
+      try {
+        const response = await fetch('/scan');
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+
+        const body = await response.text();
+        const ssids = JSON.parse(body);
+
+        select.innerHTML = '';
+
+        if (!Array.isArray(ssids) || ssids.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = attempt < 5 ? 'Scanning networks...' : 'No networks found';
+          select.appendChild(option);
+          if (attempt < 5) {
+            setTimeout(() => loadSsidOptions(attempt + 1), 1200);
+          }
+          return;
+        }
+
+        ssids.forEach((networkName, index) => {
+          const option = document.createElement('option');
+          option.value = networkName;
+          option.textContent = networkName;
+          if (index === 0) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (error) {
+        if (attempt < 5) {
+          setTimeout(() => loadSsidOptions(attempt + 1), 1200);
+          return;
+        }
+
+        select.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Scan failed';
+        select.appendChild(option);
+      }
+    }
+
+    window.addEventListener('load', loadSsidOptions);
+  </script>
+</body>
+</html>
