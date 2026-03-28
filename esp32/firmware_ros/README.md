@@ -1,47 +1,94 @@
-# Voice Command Recognition Firmware
+# Voice Command Recognition Firmware (ROS 2 / micro-ROS)
 
-This folder contains the firmware for the voice-controlled robot.
+This firmware runs keyword detection on ESP32 and publishes detected word IDs to ROS 2 using micro-ROS.
 
-We are using Platform.io to build the firmware.
 
-To understand the code the best place to start is `src/main.cpp`. This creates our `CommandDetector` and `CommandProcessor` objects and also creates a task to service the command detector as audio samples come in.
+See details on the [ai-voice-control](https://github.com/AvansMechatronica/ai-voice-control) repository. Here you can find the way to create a custom wake word model that you can use with this firmware.
 
-From there you can look at `src/CommandDetector.cpp` and `src/CommandProcessor.cpp`.
+## Main code entry points
 
-The code should be well commented and hopefully easy to understand.
+- `src/main.cpp`: app startup, task setup
+- `src/CommandDetector.cpp`: audio inference pipeline
+- `src/CommandProcessor.cpp`: command handling
+- `lib/microros/micro_ros.cpp`: ROS transport and publisher setup
 
-## Config options
+## Supported boards and environments
 
-To set things up for yourself, edit the `config.h` file and fill in your WiFi details.
+Configured in `platformio.ini`:
 
-There are a number of options in this file that you can modify to suit your own setup.
+- `esp32-wroom-ros`: serial micro-ROS transport
+- `esp32-S3-ros`: Wi-Fi micro-ROS transport (with AP config page support)
 
-If you want to use an analog microphone instead of I2S then you need to comment out this line:
+Default environment:
 
-```
-// are you using an I2S microphone - comment this out if you want to use an analog mic and ADC input
-#define USE_I2S_MIC_INPUT
-```
-
-And you will need to select the appropriate ADC channel to read data from:
-
-```
-// Analog Microphone Settings - ADC1_CHANNEL_7 is GPIO35
-#define ADC_MIC_CHANNEL ADC1_CHANNEL_7
+```bash
+platformio run
 ```
 
-If you are using an I2S Microphone then you need to tell the system which channel you have configure the microphone on (left or right - generally these devices default to left).
+Or explicitly select one:
 
-```
-// Which channel is the I2S microphone on? I2S_CHANNEL_FMT_ONLY_LEFT or I2S_CHANNEL_FMT_ONLY_RIGHT
-#define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_LEFT
-// #define I2S_MIC_CHANNEL I2S_CHANNEL_FMT_ONLY_RIGHT
+```bash
+platformio run --environment esp32-wroom-ros
+platformio run --environment esp32-S3-ros
 ```
 
-And you will need to tell it which pins you have connected to the microphone:
+## Build and flash
 
+Build:
+
+```bash
+platformio run --environment esp32-S3-ros
 ```
-#define I2S_MIC_SERIAL_CLOCK GPIO_NUM_33
-#define I2S_MIC_LEFT_RIGHT_CLOCK GPIO_NUM_26
-#define I2S_MIC_SERIAL_DATA GPIO_NUM_25
+
+Upload firmware:
+
+```bash
+platformio run --environment esp32-S3-ros --target upload
 ```
+
+If using Wi-Fi AP configuration pages (S3 env), upload LittleFS data too:
+
+```bash
+platformio run --environment esp32-S3-ros --target buildfs
+platformio run --environment esp32-S3-ros --target uploadfs
+```
+
+## ROS 2 agent setup
+
+Run micro-ROS agent with Docker.
+
+Serial transport example:
+
+```bash
+docker run --rm -it --net=host --privileged -v /dev:/dev \
+	microros/micro-ros-agent:humble serial --dev /dev/ttyACM0 -b 115200
+```
+
+Wi-Fi transport example (UDP 8888):
+
+```bash
+docker run --rm -it --net=host microros/micro-ros-agent:humble udp4 --port 8888
+```
+
+## ROS topic
+
+The firmware publishes detected words on topic:
+
+- `detected_word` (`std_msgs/msg/UInt8`)
+
+Check from ROS 2 host:
+
+```bash
+ros2 topic list
+ros2 topic echo /detected_word
+```
+
+## Network and transport configuration
+
+Configure these in `platformio.ini` build flags for Wi-Fi mode:
+
+- `WIFI_SSID`
+- `WIFI_PASSWORD`
+- `AGENT_IP_ADDRESS` (format: `"192.168.2.150"`)
+
+The firmware parses this string and converts it to an `IPAddress` object internally.
