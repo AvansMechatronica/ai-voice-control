@@ -21,6 +21,7 @@ public:
     void loop();
     void publish_detected_word(uint8_t word_id);
 private:
+    bool m_initialized;
     rcl_publisher_t detected_word_publisher;
     std_msgs__msg__UInt8 detected_word;
     rclc_executor_t executor;

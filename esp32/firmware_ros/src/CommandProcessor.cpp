@@ -37,11 +37,12 @@ const int rightStop = 1500;
 
 void CommandProcessor::processCommand(uint16_t commandIndex)
 {
-    //digitalWrite(GPIO_NUM_2, HIGH);
+    digitalWrite(ONBOARD_LED_PIN, HIGH);
     if (m_detected_word_callback)
     {
         m_detected_word_callback(static_cast<uint8_t>(commandIndex), m_detected_word_callback_context);
     }
+#if 0
     switch (commandIndex)
     {
     case 0: // forward
@@ -72,7 +73,8 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         Serial.printf("Unknown command index %d\n", commandIndex);
         break;
     }
-    //digitalWrite(GPIO_NUM_2, LOW);
+#endif
+    digitalWrite(ONBOARD_LED_PIN, LOW);
     //ledcWrite(0, calcDuty(leftStop));  // stop
     //ledcWrite(1, calcDuty(rightStop)); // stop
 }
@@ -82,7 +84,7 @@ CommandProcessor::CommandProcessor()
     m_detected_word_callback = nullptr;
     m_detected_word_callback_context = nullptr;
 
-    //pinMode(GPIO_NUM_2, OUTPUT);
+    pinMode(ONBOARD_LED_PIN, OUTPUT);
     // setup the motors
     //ledcSetup(0, 50, 16);
     //ledcAttachPin(GPIO_NUM_13, 0);
@@ -113,6 +115,9 @@ void CommandProcessor::queueCommand(uint16_t commandIndex, float best_score)
     // unsigned long now = millis();
     if (commandIndex != 5 && commandIndex != -1)
     {
+#if 0
+         Serial.printf("***** %ld Detected command %s(%f)\n", now, words[commandIndex], best_score);
+#endif
         Serial.printf("***** %ld Detected command %s(%f)\n", millis(), words[commandIndex], best_score);
         if (xQueueSendToBack(m_command_queue_handle, &commandIndex, 0) != pdTRUE)
         {

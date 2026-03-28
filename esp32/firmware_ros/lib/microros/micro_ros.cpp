@@ -42,8 +42,7 @@ void error_loop(int line){
 
 
 MicroROS::MicroROS() {
-    // Constructor implementation (if needed)
-
+  m_initialized = false;
 }
 
 /**
@@ -77,6 +76,7 @@ char* convertToCamelCase(const char *input) {
 }
 
 void MicroROS::init() {
+  m_initialized = false;
     // Initialization code for micro-ROS (if needed)
 #if defined(ONBOARD_LED_PIN)
     pinMode(ONBOARD_LED_PIN, OUTPUT); 
@@ -142,7 +142,14 @@ void MicroROS::init() {
     "detected_word"));
 
   TaskHandle_t microRosTaskHandle;
-  xTaskCreatePinnedToCore(micro_ros_task, "micro-ROS", 4096, this, 1, &microRosTaskHandle, 1);
+  BaseType_t taskCreated = xTaskCreatePinnedToCore(micro_ros_task, "micro-ROS", 4096, this, 1, &microRosTaskHandle, 1);
+  if (taskCreated != pdPASS || microRosTaskHandle == NULL)
+  {
+    Serial.printf("ERROR: Failed to create micro-ROS task\n");
+    return;
+  }
+
+  m_initialized = true;
 }
 
 void MicroROS::loop() {
@@ -151,6 +158,10 @@ void MicroROS::loop() {
 }
 
 void MicroROS::publish_detected_word(uint8_t word_id) {
+    if (!m_initialized)
+    {
+      return;
+    }
     detected_word.data = word_id;
     RCSOFTCHECK(rcl_publish(&detected_word_publisher, &detected_word, NULL));
 }
