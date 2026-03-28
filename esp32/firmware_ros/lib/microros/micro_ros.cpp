@@ -1,8 +1,9 @@
 #include "micro_ros.h"
 #if defined(WIFI)
+#if defined(WIFI_CONFIG_AP)
 #include "wifi_network_config.h"
+#endif
 #include <esp_wifi.h>
-#define NODE_NAME "voice_control_node"
 #endif
 
 
@@ -19,6 +20,62 @@ static void micro_ros_task(void *param)
 bool errorLedState = false;
 
 int reset_timer_cnt = 0;
+
+static IPAddress parseIpAddress(const char *ipv4)
+{
+  if (ipv4 == nullptr)
+  {
+    return IPAddress(0, 0, 0, 0);
+  }
+
+  uint8_t octets[4] = {0, 0, 0, 0};
+  int octetIndex = 0;
+  int value = 0;
+  bool hasDigit = false;
+
+  for (size_t i = 0;; ++i)
+  {
+    const char c = ipv4[i];
+
+    if (c >= '0' && c <= '9')
+    {
+      hasDigit = true;
+      value = (value * 10) + (c - '0');
+      if (value > 255)
+      {
+        return IPAddress(0, 0, 0, 0);
+      }
+      continue;
+    }
+
+    if (c == '.' || c == '\0')
+    {
+      if (!hasDigit || octetIndex > 3)
+      {
+        return IPAddress(0, 0, 0, 0);
+      }
+
+      octets[octetIndex++] = static_cast<uint8_t>(value);
+      value = 0;
+      hasDigit = false;
+
+      if (c == '\0')
+      {
+        break;
+      }
+      continue;
+    }
+
+    return IPAddress(0, 0, 0, 0);
+  }
+
+  if (octetIndex != 4)
+  {
+    return IPAddress(0, 0, 0, 0);
+  }
+
+  return IPAddress(octets[0], octets[1], octets[2], octets[3]);
+}
 
 void error_loop(int line){
   Serial.printf("Voice Control\nError\nSystem halted\nLine: %d\n", line);
@@ -39,6 +96,8 @@ void error_loop(int line){
     }
   }
 }
+
+
 
 
 MicroROS::MicroROS() {
@@ -75,6 +134,8 @@ char* convertToCamelCase(const char *input) {
   return output;
 }
 
+
+
 void MicroROS::init() {
   m_initialized = false;
     // Initialization code for micro-ROS (if needed)
@@ -88,7 +149,7 @@ void MicroROS::init() {
   const char *host_name = convertToCamelCase(NODE_NAME);
   Serial.printf("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 0
+#if WIFI_CONFIG_AP
   
   // UCP_MOTORS_PIN low to force WiFi configuration mode
   bool force_configure_wifi = false;//digitalRead(UCP_MOTORS_PIN) == LOW;
@@ -108,12 +169,14 @@ void MicroROS::init() {
                                networkConfig.microros_agent_ip_address,
                                networkConfig.microros_agent_port);
 #else
-#define WIFI_SSID "VRV9517724283"
-#define WIFI_PASSWORD "@AYCwXhz976C"
-#define AGENT_IP_ADDRESS IPAddress(192, 168, 2, 150)
-#define PORT 8888
 
-  set_microros_wifi_transports((char*)WIFI_SSID, (char*)WIFI_PASSWORD, AGENT_IP_ADDRESS, (size_t)PORT);
+#ifndef AGENT_IP_ADDRESS_STR
+#define AGENT_IP_ADDRESS_STR "192.168.2.150"
+#endif
+
+  constexpr size_t port = 8888;
+  IPAddress agentIp = parseIpAddress(AGENT_IP_ADDRESS);
+  set_microros_wifi_transports((char*)WIFI_SSID, (char*)WIFI_PASSWORD, agentIp, port);
 #endif
   Serial.printf("WiFi Connected\n");
   delay(2000);
