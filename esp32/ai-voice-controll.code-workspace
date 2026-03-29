@@ -4,9 +4,6 @@
 			"path": "firmware"
 		},
 		{
-			"path": "firmware_ros"
-		},
-		{
 			"path": "mic-test"
 		}
 	],
