@@ -24,3 +24,6 @@ ESP32 firmware built using Platform.io. This runs the neural network trying to d
 
 The code assumes there are two continuous servos attached to the board such as the FS90R servo - these are readily available from various suppliers and you can normally buy them with wheels as well.
 
+## 
+This repository is a fork from the original work of [atomic14's Voice-Controlled Robot](https://github.com/atomic14/voice-controlled-robot/tree/main).
+
