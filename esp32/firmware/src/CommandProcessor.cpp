@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include "CommandProcessor.h"
 
+#define RIGHT_MOTOR_CHANNEL 1
+#define LEFT_MOTOR_CHANNEL 0
 
 #define DEBUG_COMMAND_PROCESSOR
 
@@ -36,7 +38,7 @@ const int leftForward = 1600;
 const int leftBackward = 1400;
 const int leftStop = 1500;
 const int rightBackward = 1600;
-const int rightForward = 1445;
+const int rightForward = 1400;
 const int rightStop = 1500;
 #endif
 
@@ -48,10 +50,10 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
     case 0: // forward
 #ifdef DEBUG_COMMAND_PROCESSOR
         Serial.printf("Processing forward command\n");
-
+#endif
 #if defined(INCLUDE_MOTORS)
-        ledcWrite(0, calcDuty(leftForward));
-        ledcWrite(1, calcDuty(rightForward));
+        ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftForward));
+        ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightForward));
 #endif
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
@@ -60,8 +62,8 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         Serial.printf("Processing backward command\n");
 #endif
 #if defined(INCLUDE_MOTORS)
-        ledcWrite(0, calcDuty(leftBackward));
-        ledcWrite(1, calcDuty(rightBackward));
+        ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftBackward));
+        ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightBackward));
 #endif
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
@@ -70,8 +72,8 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         Serial.printf("Processing left command\n");
 #endif
 #if defined(INCLUDE_MOTORS)
-        ledcWrite(0, calcDuty(leftBackward));
-        ledcWrite(1, calcDuty(rightForward));
+        ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftBackward));
+        ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightForward));
 #endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
@@ -80,8 +82,8 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         Serial.printf("Processing right command\n");
 #endif
 #if defined(INCLUDE_MOTORS) 
-        ledcWrite(0, calcDuty(leftForward));
-        ledcWrite(1, calcDuty(rightBackward));
+        ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftForward));
+        ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightBackward));
 #endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
@@ -93,8 +95,8 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
     }
     digitalWrite(ONBOARD_LED_PIN, LOW);
 #if defined(INCLUDE_MOTORS)
-    ledcWrite(0, calcDuty(leftStop));  // stop
-    ledcWrite(1, calcDuty(rightStop)); // stop
+    ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftStop));  // stop
+    ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightStop)); // stop
 #endif
 }
 
@@ -103,12 +105,12 @@ CommandProcessor::CommandProcessor()
     pinMode(ONBOARD_LED_PIN, OUTPUT);
 #if defined(INCLUDE_MOTORS)
     // setup the motors
-    ledcSetup(0, 50, 16);
-    ledcAttachPin(LEFT_MOTOR_PIN, 0);
-    ledcSetup(1, 50, 16);
-    ledcAttachPin(RIGHT_MOTOR_PIN, 1);
-    ledcWrite(0, calcDuty(1500)); // left
-    ledcWrite(1, calcDuty(1500)); // right
+    ledcSetup(LEFT_MOTOR_CHANNEL, 50, 16);
+    ledcAttachPin(LEFT_MOTOR_PIN, LEFT_MOTOR_CHANNEL);
+    ledcSetup(RIGHT_MOTOR_CHANNEL, 50, 16);
+    ledcAttachPin(RIGHT_MOTOR_PIN, RIGHT_MOTOR_CHANNEL);
+    ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftStop)); // left
+    ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightStop)); // right
 #endif
 
     // allow up to 5 commands to be in flight at once
@@ -120,6 +122,15 @@ CommandProcessor::CommandProcessor()
     // kick off the command processor task
     TaskHandle_t command_queue_task_handle;
     xTaskCreate(commandQueueProcessorTask, "Command Queue Processor", 1024, this, 1, &command_queue_task_handle);
+
+    // Flash the onboard LED a few times to indicate we're ready
+    for(int i = 0; i < 3; i++)
+    {
+        digitalWrite(ONBOARD_LED_PIN, HIGH);
+        delay(1000);
+        digitalWrite(ONBOARD_LED_PIN, LOW);
+        delay(1000);
+    }
 }
 
 void CommandProcessor::queueCommand(uint16_t commandIndex, float best_score)

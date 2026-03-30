@@ -60,6 +60,8 @@ void setup()
 
   // start sampling from i2s device - use I2S_NUM_0 as that's the one that supports the internal ADC
   i2s_sampler->start(I2S_NUM_0, i2s_config, applicationTaskHandle);
+
+  
 }
 
 void loop()
