@@ -121,7 +121,7 @@ CommandProcessor::CommandProcessor()
     }
     // kick off the command processor task
     TaskHandle_t command_queue_task_handle;
-    xTaskCreate(commandQueueProcessorTask, "Command Queue Processor", 1024, this, 1, &command_queue_task_handle);
+    xTaskCreate(commandQueueProcessorTask, "Command Queue Processor", 4096, this, 1, &command_queue_task_handle);
 
     // Flash the onboard LED a few times to indicate we're ready
     for(int i = 0; i < 3; i++)
