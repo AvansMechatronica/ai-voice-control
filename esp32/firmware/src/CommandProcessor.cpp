@@ -1,8 +1,23 @@
 #include <Arduino.h>
 #include "CommandProcessor.h"
 
+#if defined(INCLUDE_PICOROBOT)
+#include <WS2812FX.h>
+#endif
+
+#if defined(INCLUDE_MOTORS)
 #define RIGHT_MOTOR_CHANNEL 1
 #define LEFT_MOTOR_CHANNEL 0
+#endif
+
+#if defined(INCLUDE_PICOROBOT)
+#define LA_CHANNEL 0
+#define LB_CHANNEL 1
+#define RA_CHANNEL 2
+#define RB_CHANNEL 3
+//WS2812FX *ws2812fx;
+Adafruit_NeoPixel *ws2812fx;
+#endif
 
 #define DEBUG_COMMAND_PROCESSOR
 
@@ -24,14 +39,19 @@ void commandQueueProcessorTask(void *param)
         {
             commandProcessor->processCommand(commandIndex);
         }
+#if defined(INCLUDE_PICOROBOT)
+        //ws2812fx->service();
+#endif
     }
 }
 
+#if defined(INCLUDE_MOTORS)
 int calcDuty(int ms)
 {
     // 50Hz = 20ms period
     return (65536 * ms) / 20000;
 }
+#endif
 
 #if defined(INCLUDE_MOTORS)
 const int leftForward = 1600;
@@ -41,6 +61,12 @@ const int rightBackward = 1600;
 const int rightForward = 1400;
 const int rightStop = 1500;
 #endif
+
+#if defined(INCLUDE_PICOROBOT)
+#define MOTOR_SPEED 200 //120
+#define MOTOR_TURN_SPEED 80
+#endif
+
 
 void CommandProcessor::processCommand(uint16_t commandIndex)
 {
@@ -55,6 +81,13 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftForward));
         ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightForward));
 #endif
+#if defined(INCLUDE_PICOROBOT)
+        // Move forward
+        ledcWrite(LA_CHANNEL, 0); // left forward
+        ledcWrite(LB_CHANNEL, MOTOR_SPEED);           // left backward
+        ledcWrite(RA_CHANNEL, MOTOR_SPEED); // right forward
+        ledcWrite(RB_CHANNEL, 0);           // right backward
+#endif
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
     case 1: // backward
@@ -65,6 +98,13 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftBackward));
         ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightBackward));
 #endif
+#if defined(INCLUDE_PICOROBOT)
+        // Move backward
+        ledcWrite(LA_CHANNEL, MOTOR_SPEED);           // left forward
+        ledcWrite(LB_CHANNEL, 0); // left backward
+        ledcWrite(RA_CHANNEL, 0);           // right forward
+        ledcWrite(RB_CHANNEL, MOTOR_SPEED); // right backward
+#endif  
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
     case 2: // left
@@ -75,6 +115,13 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftBackward));
         ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightForward));
 #endif
+#if defined(INCLUDE_PICOROBOT)
+        // Turn left
+        ledcWrite(LA_CHANNEL, MOTOR_TURN_SPEED);           // left forward
+        ledcWrite(LB_CHANNEL, 0); // left backward
+        ledcWrite(RA_CHANNEL, MOTOR_TURN_SPEED); // right forward
+        ledcWrite(RB_CHANNEL, 0);           // right backward
+#endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
     case 3: // right
@@ -84,6 +131,13 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
 #if defined(INCLUDE_MOTORS) 
         ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftForward));
         ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightBackward));
+#endif
+#if defined(INCLUDE_PICOROBOT)
+        // Turn right
+        ledcWrite(LA_CHANNEL, 0); // left forward
+        ledcWrite(LB_CHANNEL, MOTOR_TURN_SPEED);           // left backward
+        ledcWrite(RA_CHANNEL, 0);           // right forward
+        ledcWrite(RB_CHANNEL, MOTOR_TURN_SPEED); // right backward
 #endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
@@ -98,6 +152,13 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
     ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftStop));  // stop
     ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightStop)); // stop
 #endif
+#if defined(INCLUDE_PICOROBOT)
+    // Stop all motors
+    ledcWrite(LA_CHANNEL, 0);
+    ledcWrite(LB_CHANNEL, 0);
+    ledcWrite(RA_CHANNEL, 0);
+    ledcWrite(RB_CHANNEL, 0);
+#endif
 }
 
 CommandProcessor::CommandProcessor()
@@ -111,6 +172,33 @@ CommandProcessor::CommandProcessor()
     ledcAttachPin(RIGHT_MOTOR_PIN, RIGHT_MOTOR_CHANNEL);
     ledcWrite(LEFT_MOTOR_CHANNEL, calcDuty(leftStop)); // left
     ledcWrite(RIGHT_MOTOR_CHANNEL, calcDuty(rightStop)); // right
+#endif
+
+#if defined(INCLUDE_PICOROBOT)
+    // setup the motors
+    // Setup PWM channels for the motors with 1000Hz frequency and 8-bit resolution
+    ledcSetup(LA_CHANNEL, 1000, 8);
+    ledcAttachPin(LA_PIN, LA_CHANNEL);
+    ledcSetup(LB_CHANNEL, 1000, 8);
+    ledcAttachPin(LB_PIN, LB_CHANNEL);
+    ledcSetup(RA_CHANNEL, 1000, 8);
+    ledcAttachPin(RA_PIN, RA_CHANNEL);
+    ledcSetup(RB_CHANNEL, 1000, 8);
+    ledcAttachPin(RB_PIN, RB_CHANNEL);
+    // Turn off all motors initially
+    ledcWrite(LA_CHANNEL, 0); // left forward
+    ledcWrite(LB_CHANNEL, 0); // left backward
+    ledcWrite(RA_CHANNEL, 0); // right forward
+    ledcWrite(RB_CHANNEL, 0); // right backward
+
+    // setup the WS2812FX library for the onboard LED 
+    ws2812fx = new WS2812FX(8, WS2812B_PIN, NEO_GRB + NEO_KHZ800);
+    ws2812fx->begin();
+    //ws2812fx->init();
+    ws2812fx->setBrightness(50);
+    //ws2812fx->setColor(0, 255, 0); // green
+    ws2812fx->setPixelColor(1, 0, 255, 0); // green
+    ws2812fx->show();
 #endif
 
     // allow up to 5 commands to be in flight at once
