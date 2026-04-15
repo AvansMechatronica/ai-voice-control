@@ -17,6 +17,7 @@
 #define RB_CHANNEL 3
 //WS2812FX *ws2812fx;
 Adafruit_NeoPixel *ws2812fx;
+#define NUMBER_OF_RGB_LEDS 8
 #endif
 
 #define DEBUG_COMMAND_PROCESSOR
@@ -67,6 +68,15 @@ const int rightStop = 1500;
 #define MOTOR_TURN_SPEED 80
 #endif
 
+#if defined(INCLUDE_PICOROBOT)
+void turnAllRgbLedsOff()
+{
+    for (int i = 0; i < NUMBER_OF_RGB_LEDS; i++)    {
+        ws2812fx->setPixelColor(i, 0, 0, 0);
+    }
+    ws2812fx->show();
+}
+#endif
 
 void CommandProcessor::processCommand(uint16_t commandIndex)
 {
@@ -87,6 +97,9 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LB_CHANNEL, MOTOR_SPEED);           // left backward
         ledcWrite(RA_CHANNEL, MOTOR_SPEED); // right forward
         ledcWrite(RB_CHANNEL, 0);           // right backward
+        ws2812fx->setPixelColor(2, 0, 0, 255); // blue
+        ws2812fx->setPixelColor(3, 0, 0, 255); // blue
+        ws2812fx->show();  
 #endif
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
@@ -104,6 +117,9 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LB_CHANNEL, 0); // left backward
         ledcWrite(RA_CHANNEL, 0);           // right forward
         ledcWrite(RB_CHANNEL, MOTOR_SPEED); // right backward
+        ws2812fx->setPixelColor(6, 128, 128, 0); // yellow
+        ws2812fx->setPixelColor(7, 128, 128, 0); // yellow
+        ws2812fx->show();
 #endif  
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;
@@ -121,6 +137,10 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LB_CHANNEL, 0); // left backward
         ledcWrite(RA_CHANNEL, MOTOR_TURN_SPEED); // right forward
         ledcWrite(RB_CHANNEL, 0);           // right backward
+        ws2812fx->setPixelColor(4, 255, 0, 0); // blue
+        ws2812fx->setPixelColor(5, 255, 0, 0); // blue
+        ws2812fx->show();
+
 #endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
@@ -138,6 +158,10 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
         ledcWrite(LB_CHANNEL, MOTOR_TURN_SPEED);           // left backward
         ledcWrite(RA_CHANNEL, 0);           // right forward
         ledcWrite(RB_CHANNEL, MOTOR_TURN_SPEED); // right backward
+        ws2812fx->setPixelColor(1, 0, 255, 0); // green
+        ws2812fx->setPixelColor(0, 0, 255, 0); // green
+//        ws2812fx->setPixelColor(7, 0, 255, 0); // green
+        ws2812fx->show();
 #endif
         vTaskDelay(500 / portTICK_PERIOD_MS);
         break;
@@ -158,6 +182,7 @@ void CommandProcessor::processCommand(uint16_t commandIndex)
     ledcWrite(LB_CHANNEL, 0);
     ledcWrite(RA_CHANNEL, 0);
     ledcWrite(RB_CHANNEL, 0);
+    turnAllRgbLedsOff();
 #endif
 }
 
@@ -192,7 +217,7 @@ CommandProcessor::CommandProcessor()
     ledcWrite(RB_CHANNEL, 0); // right backward
 
     // setup the WS2812FX library for the onboard LED 
-    ws2812fx = new WS2812FX(8, WS2812B_PIN, NEO_GRB + NEO_KHZ800);
+    ws2812fx = new WS2812FX(NUMBER_OF_RGB_LEDS, WS2812B_PIN, NEO_GRB + NEO_KHZ800);
     ws2812fx->begin();
     //ws2812fx->init();
     ws2812fx->setBrightness(50);
